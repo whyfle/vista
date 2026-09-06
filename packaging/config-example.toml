@@ -1,0 +1,29 @@
+[resolver]
+prefer_native = true
+allow_flatpak = true
+allow_snap = true
+prefer_stable = true
+
+[security]
+verify_checksums = true
+require_confirmation = true
+allow_untrusted = false
+
+[cache]
+enabled = true
+ttl_seconds = 3600
+# directory = "/home/user/.cache/vista"
+
+[github]
+api_url = "https://api.github.com"
+# api_token = "ghp_..."
+rate_limit_warn = true
+
+[flathub]
+enabled = true
+api_url = "https://flathub.org/api/v2"
+
+[general]
+auto_confirm = false
+# architecture = "x86_64"
+verbose = false

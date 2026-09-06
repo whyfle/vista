@@ -1,0 +1,45 @@
+{
+  "tag_name": "v2.4.1",
+  "name": "Test App 2.4.1",
+  "body": "Test release with all formats",
+  "prerelease": false,
+  "draft": false,
+  "html_url": "https://github.com/vista-test/cool-app/releases/tag/v2.4.1",
+  "assets": [
+    {
+      "name": "cool-app-2.4.1-x86_64.rpm",
+      "browser_download_url": "https://github.com/vista-test/cool-app/releases/download/v2.4.1/cool-app-2.4.1-x86_64.rpm",
+      "size": 1234567,
+      "download_count": 100,
+      "content_type": "application/x-rpm"
+    },
+    {
+      "name": "cool-app-2.4.1-aarch64.rpm",
+      "browser_download_url": "https://github.com/vista-test/cool-app/releases/download/v2.4.1/cool-app-2.4.1-aarch64.rpm",
+      "size": 1234000,
+      "download_count": 10,
+      "content_type": "application/x-rpm"
+    },
+    {
+      "name": "cool-app-2.4.1-amd64.deb",
+      "browser_download_url": "https://github.com/vista-test/cool-app/releases/download/v2.4.1/cool-app-2.4.1-amd64.deb",
+      "size": 1230000,
+      "download_count": 90,
+      "content_type": "application/vnd.debian.binary-package"
+    },
+    {
+      "name": "cool-app-2.4.1.AppImage",
+      "browser_download_url": "https://github.com/vista-test/cool-app/releases/download/v2.4.1/cool-app-2.4.1.AppImage",
+      "size": 5000000,
+      "download_count": 50,
+      "content_type": "application/x-executable"
+    },
+    {
+      "name": "checksums.txt",
+      "browser_download_url": "https://github.com/vista-test/cool-app/releases/download/v2.4.1/checksums.txt",
+      "size": 512,
+      "download_count": 20,
+      "content_type": "text/plain"
+    }
+  ]
+}

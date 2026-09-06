@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="console-application">
+  <id>io.github.whyfle.Vista</id>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Vista</name>
+  <summary>GitHub-backed universal Linux package manager</summary>
+  <description>
+    <p>Tell Vista what you want. Vista figures out how your Linux system should install it.</p>
+    <p>GitHub Releases as primary backend, native RPM/DEB scoring, Flatpak/Flathub fallback.</p>
+  </description>
+  <launchable type="console">vista</launchable>
+  <url type="homepage">https://github.com/whyfle/vista</url>
+  <provides>
+    <binary>vista</binary>
+  </provides>
+  <releases>
+    <release version="0.1.0" date="2026-09-06">
+      <description>
+        <p>Initial release: distro detect, GitHub resolver, Flatpak fallback, DNF/APT/Pacman adapters.</p>
+      </description>
+    </release>
+  </releases>
+</component>

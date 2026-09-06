@@ -1,0 +1,20 @@
+[
+  {
+    "app_id": "com.discordapp.Discord",
+    "name": "Discord",
+    "summary": "Chat client",
+    "description": "Test fixture",
+    "icon": null,
+    "installs_last_month": 100000,
+    "keywords": ["chat"]
+  },
+  {
+    "app_id": "org.gimp.GIMP",
+    "name": "GIMP",
+    "summary": "Image editor",
+    "description": "Test fixture",
+    "icon": null,
+    "installs_last_month": 50000,
+    "keywords": ["image", "editor"]
+  }
+]

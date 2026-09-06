@@ -1,0 +1,8 @@
+[vista]
+name=Vista Local Test Repo
+baseurl=file:///home/whyfle/vista-package/packaging/repo
+enabled=1
+gpgcheck=0
+skip_if_unavailable=0
+# For sharing via HTTP during tests:
+# baseurl=http://localhost:8000/

@@ -1,0 +1,31 @@
+{
+  "tag_name": "v1.0.0",
+  "name": "Flatpak only app",
+  "body": "No native packages",
+  "prerelease": false,
+  "draft": false,
+  "html_url": "https://github.com/vista-test/no-native/releases/tag/v1.0.0",
+  "assets": [
+    {
+      "name": "app-1.0.0-macos.dmg",
+      "browser_download_url": "https://github.com/vista-test/no-native/releases/download/v1.0.0/app-macos.dmg",
+      "size": 1000000,
+      "download_count": 5,
+      "content_type": "application/octet-stream"
+    },
+    {
+      "name": "app-1.0.0-win64.exe",
+      "browser_download_url": "https://github.com/vista-test/no-native/releases/download/v1.0.0/app-win64.exe",
+      "size": 1000000,
+      "download_count": 5,
+      "content_type": "application/octet-stream"
+    },
+    {
+      "name": "checksums.txt",
+      "browser_download_url": "https://github.com/vista-test/no-native/releases/download/v1.0.0/checksums.txt",
+      "size": 200,
+      "download_count": 2,
+      "content_type": "text/plain"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+/target
+/target/rpmbuild/
+*.log
+.cache/
+*.rpm
+*.srpm
+packaging/repo/repodata/
+packaging/repo/*.rpm
