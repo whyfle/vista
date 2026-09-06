@@ -1,4 +1,4 @@
-# Vista — GitHub-Backed Universal Linux Package Manager
+# Vista — Universal Linux Package Manager
 
 > Tell Vista what you want. Vista figures out how your Linux system should install it.
 
