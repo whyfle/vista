@@ -1,5 +1,9 @@
 # Vista — Universal Linux Package Manager
 
+<p align="center">
+  <img src="assets/vista-logo.png" alt="Vista logo" width="180">
+</p>
+
 > Tell Vista what you want. Vista figures out how your Linux system should install it.
 
 ## Quick start
