@@ -2,19 +2,6 @@
 
 > Tell Vista what you want. Vista figures out how your Linux system should install it.
 
-```bash
-vista add user@repo
-vista install firefox
-vista install fastfetch-cli@fastfetch --dry-run --yes
-```
-
-Priority: **native package → Flatpak/Flathub fallback → clear error**. Never installs incompatible arch/format.
-
-## Status (v0.1.0)
-
-Rust, single binary (~3.7 MB release). 11 tests pass (7 unit + 4 resolver integration).
-Verified on Fedora 44 x86_64: `fastfetch-linux-amd64.rpm` scores 195 (native 100 + arch 50 + stable 25 + github 20), `discord` Flathub search returns `com.discordapp.Discord`.
-
 ## Quick start
 
 ```bash
