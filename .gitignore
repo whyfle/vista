@@ -6,3 +6,5 @@
 *.srpm
 packaging/repo/repodata/
 packaging/repo/*.rpm
+packaging/deb/*.deb
+packaging/arch/*.pkg.tar.zst

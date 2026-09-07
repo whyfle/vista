@@ -629,60 +629,61 @@ fn handle_upgrade(args: UpgradeArgs, global_yes: bool, global_dry: bool) -> anyh
     Ok(())
 }
 
+fn truncate_desc(s: &str, max: usize) -> String {
+    let clean: String = s.split_whitespace().collect::<Vec<_>>().join(" ");
+    if clean.chars().count() <= max {
+        return clean;
+    }
+    let mut out: String = clean.chars().take(max.saturating_sub(1)).collect();
+    out.push('…');
+    out
+}
+
 fn handle_search(args: SearchArgs, distro: distro::Distribution, config: Config) -> anyhow::Result<()> {
-    println!("\n  {} Searching for '{}'...", "Vista".cyan().bold(), args.query.bold());
-    println!("  Distro: {}  Arch: {}", distro.id, distro.architecture);
-    println!();
+    println!("{} '{}' — {} {} ({})", "vista search".bold(), args.query.bold(), distro.id, distro.architecture, distro.native_format);
 
     let github = crate::github::GithubProvider::from_config(&config);
     let flathub = crate::flathub::FlathubProvider::from_config(&config);
 
     // Search GitHub
-    println!("  GitHub results:");
     match github.search_repos(&args.query, args.limit) {
         Ok(res) => {
             if res.items.is_empty() {
-                println!("    No GitHub repositories found.");
+                println!("github: no results");
             } else {
+                println!("github:");
                 for (i, repo) in res.items.iter().enumerate().take(args.limit as usize) {
-                    println!("\n  {}. {} {}", i+1, repo.full_name.bold().cyan(), format!("★ {}", repo.stargazers_count.unwrap_or(0)).yellow().dimmed());
-                    if let Some(desc) = &repo.description {
-                        println!("     {}", desc.dimmed());
+                    let stars = format!("★{}", repo.stargazers_count.unwrap_or(0)).yellow().to_string();
+                    match &repo.description {
+                        Some(d) if !d.trim().is_empty() => println!("{}. {} {} — {}", i+1, repo.full_name.bold().cyan(), stars, truncate_desc(d, 90).dimmed()),
+                        _ => println!("{}. {} {}", i+1, repo.full_name.bold().cyan(), stars),
                     }
-                    println!("     {}", repo.html_url.dimmed());
-                    // Try to hint native availability? Could check releases quickly but skip for search speed?
-                    // We'll attempt to quick check release assets if not too heavy? Limit to first?
-                    // For now just indicate
                 }
             }
         },
-        Err(e) => eprintln!("    GitHub search failed: {}", e),
+        Err(e) => eprintln!("github: search failed: {}", e),
     }
 
-    println!("\n  Flathub results:");
     if config.flathub.enabled {
         match flathub.search(&args.query) {
             Ok(hits) => {
                 if hits.is_empty() {
-                    println!("    No Flathub packages found.");
+                    println!("flathub: no results");
                 } else {
+                    println!("flathub:");
                     for (i, hit) in hits.iter().enumerate().take(args.limit as usize) {
-                        println!("\n  {}. {} ({})", i+1, hit.name.bold().green(), hit.app_id.cyan());
-                        if let Some(s) = &hit.summary { println!("     {}", s.dimmed()); }
-                        println!("     https://flathub.org/apps/{}", hit.app_id);
+                        match &hit.summary {
+                            Some(s) if !s.trim().is_empty() => println!("{}. {} ({}) — {}", i+1, hit.name.bold().green(), hit.app_id.cyan(), truncate_desc(s, 80).dimmed()),
+                            _ => println!("{}. {} ({})", i+1, hit.name.bold().green(), hit.app_id.cyan()),
+                        }
                     }
                 }
             },
-            Err(e) => eprintln!("    Flathub search failed: {}", e),
+            Err(e) => eprintln!("flathub: search failed: {}", e),
         }
-    } else {
-        println!("    Flathub disabled in config");
     }
 
-    println!("\n  Recommendations for your system ({}):", distro.native_format.to_string().yellow());
-    println!("    Native format preferred: {}", distro.native_format);
-    // Could show scoring for first github hit?
-    println!();
+    println!("install: vista install user@repo  (native: {})", distro.native_format.to_string().yellow());
     Ok(())
 }
 

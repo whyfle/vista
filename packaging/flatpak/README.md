@@ -1,24 +1,28 @@
 # Flathub submission draft for Vista
 
 This directory contains a Flathub-ready manifest. Vista is CLI-only, so
-Flathub review may ask for justification; alternative is publishing to
-Fedora COPR + native repos (recommended for a package manager needing host
+Flathub review may ask for justification; the recommended distribution is
+native Release 1 binaries (recommended for a package manager needing host
 package-manager access).
 
-## Option A (recommended): COPR / native DNF repo
+## Option A (recommended): native binaries from Release 1
+
+`install.sh` (repo root) detects the distro and installs the matching native
+package (.rpm / .deb / .pkg.tar.zst) from
+[Release 1](https://github.com/whyfle/vista/releases/tag/1), verified against
+`checksums.txt`:
 
 ```bash
-# local test repo (this repo):
+curl -fsSL https://raw.githubusercontent.com/whyfle/vista/main/install.sh | sudo bash
+```
+
+Local test repo alternative (this repo):
+
+```bash
 ./packaging/repo/build-repo.sh
 sudo ./packaging/repo/add-repo.sh
 sudo dnf install -y vista
 ```
-
-For public hosting:
-1. Create COPR at https://copr.fedorainfracloud.org/ -> `whyfle/vista`
-2. Upload `packaging/rpm/vista.spec` + source tarball
-3. COPR builds for Fedora/RHEL/CentOS, generates `.repo` automatically
-4. Users: `sudo dnf copr enable whyfle/vista && sudo dnf install vista`
 
 ## Option B: Flathub
 
@@ -39,6 +43,6 @@ flatpak-builder --run build-dir packaging/flatpak/io.github.whyfle.Vista.yml vis
 
 ## Decision
 
-Ship DNF/COPR as primary. Keep Flatpak manifest for users who explicitly
+Ship native Release 1 binaries as primary. Keep Flatpak manifest for users who explicitly
 want sandboxed `vista search/info` but document that `vista install` of
 RPM/DEB from inside Flatpak cannot manage host packages.

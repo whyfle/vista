@@ -34,6 +34,21 @@ vista search foo
 
 Config: `~/.config/vista/config.toml` (see `packaging/config-example.toml`).
 
+## Install (native binaries, Release 1)
+
+`install.sh` detects your distro and installs the matching native package
+(.rpm / .deb / .pkg.tar.zst) from
+[Release 1](https://github.com/whyfle/vista/releases/tag/1), verified against
+`checksums.txt`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/whyfle/vista/main/install.sh | sudo bash
+# or from a clone:
+sudo ./install.sh
+sudo ./install.sh --yes   # no prompt
+./install.sh --dry-run    # preview only, no root needed
+```
+
 ## DNF repo (local, tested)
 
 Built: `vista-0.1.0-1.fc44.x86_64.rpm` + `vista-test-hello-1.0.0-1.fc44.noarch.rpm` with `repodata/` via `createrepo_c`.
@@ -46,11 +61,9 @@ sudo ./packaging/repo/add-repo.sh
 sudo dnf install -y vista vista-test-hello
 ```
 
-Public hosting: upload `packaging/rpm/vista.spec` to COPR (`whyfle/vista`), then users do `sudo dnf copr enable whyfle/vista && sudo dnf install vista`.
-
 ## Flathub
 
-Manifest: `packaging/flatpak/io.github.whyfle.Vista.yml` + metainfo. Note: Vista needs host `dnf/flatpak` access, so Flatpak is a poor fit for `install`; DNF/COPR is primary. See `packaging/flatpak/README.md` for submission steps. Flathub search API fixed to `POST /api/v2/search`.
+Manifest: `packaging/flatpak/io.github.whyfle.Vista.yml` + metainfo. Note: Vista needs host `dnf/flatpak` access, so Flatpak is a poor fit for `install`; native Release 1 binaries (see Install above) are primary. See `packaging/flatpak/README.md` for submission steps. Flathub search API fixed to `POST /api/v2/search`.
 
 ## Test packages
 

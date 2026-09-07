@@ -1,0 +1,27 @@
+# Maintainer: Vista Contributors <vista@local>
+pkgname=vista
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="GitHub-backed universal Linux package manager"
+arch=('x86_64' 'aarch64')
+url="https://github.com/whyfle/vista"
+license=('MIT')
+depends=('gcc-libs')
+optdepends=('flatpak: Flathub fallback backend'
+            'dnf: RPM installation backend (Fedora/RHEL)')
+makedepends=('cargo')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/whyfle/vista/archive/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+  cd "$pkgname-$pkgver"
+  cargo build --release --locked
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  install -Dm0755 target/release/vista "$pkgdir/usr/bin/vista"
+  install -Dm0644 packaging/config-example.toml "$pkgdir/usr/share/doc/vista/config-example.toml"
+  install -Dm0644 README.md "$pkgdir/usr/share/doc/vista/README.md"
+  install -Dm0644 LICENSE "$pkgdir/usr/share/licenses/vista/LICENSE"
+}
