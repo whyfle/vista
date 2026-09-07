@@ -42,15 +42,49 @@ fn which_exists(cmd: &str) -> bool {
     Command::new("which").arg(cmd).output().map(|o| o.status.success()).unwrap_or(false)
 }
 
+/// Package-manager binaries that need root for install/remove/update.
+/// (flatpak/snap handle auth themselves via polkit or --user.)
+pub fn needs_root(cmd: &str) -> bool {
+    matches!(cmd, "dnf" | "dnf5" | "yum" | "apt-get" | "apt" | "pacman" | "zypper" | "apk")
+}
+
+pub fn is_root() -> bool {
+    // No libc dep; `id -u` is universal on Linux. SUDO_UID means we are root via sudo.
+    if std::env::var("SUDO_UID").is_ok() {
+        return true;
+    }
+    Command::new("id").arg("-u").output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim() == "0")
+        .unwrap_or(false)
+}
+
+/// Pure decision helper (tested): should `cmd` be prefixed with sudo?
+pub fn wants_sudo(cmd: &str, root: bool, sudo_available: bool, no_sudo_env: bool) -> bool {
+    needs_root(cmd) && !root && sudo_available && !no_sudo_env
+}
+
 fn run_command(cmd: &str, args: &[&str], dry_run: bool) -> anyhow::Result<()> {
     if dry_run {
         println!("  [dry-run] {} {}", cmd, args.join(" "));
         return Ok(());
     }
-    println!("  Running: {} {}", cmd, args.join(" "));
-    let status = Command::new(cmd).args(args).stdin(Stdio::inherit()).stdout(Stdio::inherit()).stderr(Stdio::inherit()).status()?;
+    // Escalate only the package-manager invocation (never all of vista):
+    // without this every `vista install` fails for non-root users at the dnf/apt step.
+    let sudo = wants_sudo(cmd, is_root(), which_exists("sudo"), std::env::var("VISTA_NO_SUDO").is_ok());
+    if sudo {
+        println!("  Re-running with sudo: sudo {} {}", cmd, args.join(" "));
+    } else {
+        println!("  Running: {} {}", cmd, args.join(" "));
+    }
+    let mut child = Command::new(if sudo { "sudo" } else { cmd });
+    if sudo {
+        child.arg(cmd);
+    }
+    let status = child.args(args).stdin(Stdio::inherit()).stdout(Stdio::inherit()).stderr(Stdio::inherit()).status()?;
     if !status.success() {
-        anyhow::bail!("Command {} failed with status {:?}", cmd, status.code());
+        anyhow::bail!("Command {}{} failed with status {:?}{}",
+            if sudo { "sudo " } else { "" }, cmd, status.code(),
+            if sudo { "" } else { " (try running with sudo: sudo vista install <package>)" });
     }
     Ok(())
 }
@@ -256,4 +290,29 @@ pub fn available_managers() -> Vec<Box<dyn PackageManager>> {
     let zypper = ZypperAdapter::new(false);
     if zypper.is_available() { v.push(Box::new(zypper)); }
     v
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_needs_root() {
+        assert!(needs_root("dnf"));
+        assert!(needs_root("dnf5"));
+        assert!(needs_root("apt-get"));
+        assert!(needs_root("pacman"));
+        assert!(needs_root("zypper"));
+        assert!(needs_root("apk"));
+        assert!(!needs_root("flatpak"));
+        assert!(!needs_root("snap"));
+    }
+    #[test]
+    fn test_wants_sudo_matrix() {
+        // (cmd, is_root, sudo_available, no_sudo_env) -> sudo?
+        assert!(wants_sudo("dnf5", false, true, false));   // the reported fastfetch failure
+        assert!(!wants_sudo("dnf5", true, true, false));   // already root
+        assert!(!wants_sudo("dnf5", false, false, false)); // no sudo binary
+        assert!(!wants_sudo("dnf5", false, true, true));   // VISTA_NO_SUDO opt-out
+        assert!(!wants_sudo("flatpak", false, true, false));
+    }
 }

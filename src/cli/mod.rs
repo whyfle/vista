@@ -252,7 +252,7 @@ fn handle_install(args: InstallArgs, distro: distro::Distribution, config: Confi
                         println!("    Architecture: {}", asset.arch.as_deref().unwrap_or("unknown"));
                         println!("    Distribution: {} ({})", distro.id, distro.native_format);
                         println!();
-                        let prompt = format!("  Install this package? [Y/n]");
+                        let prompt = format!("  Install this package?");
                         if !security::prompt_confirmation(&prompt, yes) {
                             println!("  Aborted.");
                             return Ok(());
@@ -418,7 +418,7 @@ fn handle_install(args: InstallArgs, distro: distro::Distribution, config: Confi
                     }
 
                     if !yes && config.security.require_confirmation {
-                        let prompt = format!("  Install Flatpak {} ? [Y/n]", app_id);
+                        let prompt = format!("  Install Flatpak {}?", app_id);
                         if !security::prompt_confirmation(&prompt, yes) {
                             println!("  Aborted.");
                             return Ok(());
@@ -488,7 +488,7 @@ fn handle_remove(args: RemoveArgs, global_yes: bool, global_dry: bool) -> anyhow
         println!("    Method: {}", pkg.installation_method);
         println!("    ID: {}", pkg.package_identifier);
         if !yes {
-            if !security::prompt_confirmation(&format!("  Remove {}? [Y/n]", pkg.name), yes) {
+            if !security::prompt_confirmation(&format!("  Remove {}?", pkg.name), yes) {
                 println!("  Aborted.");
                 return Ok(());
             }

@@ -102,3 +102,30 @@ fn no_native_triggers_fallback() {
         serde_json::from_str(&std::fs::read_to_string("tests/fixtures/flathub-search.json").unwrap()).unwrap();
     assert!(flathub.as_array().unwrap().len() >= 1);
 }
+
+#[test]
+fn flathub_match_rejects_fuzzy_junk() {
+    use vista::resolver::Resolver;
+    use vista::flathub::FlathubHit;
+    let wesnoth = FlathubHit {
+        app_id: "org.wesnoth.Wesnoth".to_string(),
+        name: "Battle for Wesnoth".to_string(),
+        summary: Some("strategy game".to_string()),
+        description: None, icon: None, installs_last_month: None, keywords: None,
+    };
+    // "bat" must NOT match Battle for Wesnoth (seen live: sharkdp/bat case)
+    assert!(!Resolver::flathub_matches_repo("bat", &wesnoth));
+    let prism = FlathubHit {
+        app_id: "org.prismlauncher.PrismLauncher".to_string(),
+        name: "Prism Launcher".to_string(),
+        summary: None, description: None, icon: None, installs_last_month: None, keywords: None,
+    };
+    assert!(Resolver::flathub_matches_repo("PrismLauncher", &prism));
+    let discord = FlathubHit {
+        app_id: "com.discordapp.Discord".to_string(),
+        name: "Discord".to_string(),
+        summary: None, description: None, icon: None, installs_last_month: None, keywords: None,
+    };
+    assert!(Resolver::flathub_matches_repo("discord", &discord));
+    assert!(!Resolver::flathub_matches_repo("x", &discord)); // too short
+}

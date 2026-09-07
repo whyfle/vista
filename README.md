@@ -62,6 +62,23 @@ Manifest: `packaging/flatpak/io.github.whyfle.Vista.yml` + metainfo. Note: Vista
 
 `install` (alias `add`), `remove`, `update`, `upgrade`, `search`, `info`, `list`, `clean`, `sys-info`. Flags: `--github user@repo`, `--repo`, `--default native/flathub`, `--flatpak`, `-y/--yes`, `--dry-run`.
 
+## Behavior notes
+
+- **Root escalation:** `vista install` runs the native package manager with
+  `sudo` automatically when you are not root (`dnf`/`apt-get`/`pacman`/
+  `zypper`/`apk`; flatpak handles auth itself). A `Re-running with sudo:`
+  line means it escalated. Set `VISTA_NO_SUDO=1` to
+  disable, or run `sudo vista install <package>` yourself.
+- **Selection policy:** Vista only auto-installs what it can install
+  (native packages, AppImage, Flatpak). If the best GitHub asset is a
+  tarball/zip, Vista checks Flathub instead — `vista install discord`
+  resolves to `com.discordapp.Discord`, and an explicit `user@repo` only
+  diverts to Flathub on a real name match (never fuzzy junk like Wesnoth
+  for `bat`). With no usable build anywhere you get the download path plus
+  a manual-install note, never a blind install.
+- **Confirmation:** every install asks once (`Install this package? [Y/n]`);
+  `-y`/`--yes` (or `auto_confirm` in config) skips it.
+
 ## Layout
 
 `src/{cli,resolver,github,flathub,distro,packages,installers,security,database,cache,config,downloader}` + `packaging/{rpm,repo,flatpak,test-packages}` + `tests/`.

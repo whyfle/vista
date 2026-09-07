@@ -91,7 +91,14 @@ impl Resolver {
         if let Some((owner, repo)) = GithubProvider::parse_repo_spec(spec) {
             // Try github first
             match self.resolve_github_repo(&owner, &repo, opts) {
-                Ok(r) => return Ok(r),
+                Ok(r) => {
+                    // A tarball/zip "win" is not a win: if Vista can't install
+                    // the asset, prefer a Flathub build of the same project.
+                    if let Some(fl) = self.flathub_if_uninstallable(&r, &repo, opts) {
+                        return Ok(fl);
+                    }
+                    return Ok(r);
+                },
                 Err(e) => {
                     eprintln!("  GitHub resolution failed for {}/{}: {}", owner, repo, e);
                     // If allowed, try flathub fallback for the repo name part
@@ -117,20 +124,36 @@ impl Resolver {
         }
 
         if let Some(gh) = best_github {
-            // If we have a good github result with high score (>50), prefer it
-            if gh.score > 50 || !opts.allow_flatpak {
+            let installable = matches!(&gh.source,
+                ResolvedSource::Github { asset, .. } if asset.format.is_installable());
+            // Keep the GitHub result only if Vista can actually install it
+            // with a confident score. Otherwise a Flathub build (or clear
+            // error) beats downloading a tarball/zip we can't install —
+            // previously `vista install discord` picked an unrelated repo's
+            // tarball (score 52) over com.discordapp.Discord.
+            if installable && gh.score > 50 {
                 return Ok(gh);
             }
-            // Otherwise check flathub as fallback maybe better
-            if opts.allow_flatpak && self.config.flathub.enabled {
+            if !installable {
+                eprintln!("  GitHub result is not directly installable ({}), checking Flathub...",
+                    match &gh.source {
+                        ResolvedSource::Github { asset, .. } => asset.format.to_string(),
+                        _ => "?".to_string(),
+                    });
+            }
+            if opts.allow_flatpak && self.config.flathub.enabled
+                && !matches!(&opts.preferred_source, Some(p) if p == "native") {
                 match self.resolve_flathub(spec) {
                     Ok(fl) => {
-                        // Decide: if github score is native + arch correct, keep github, else flathub
-                        // Already we know github score <=50 means not great
-                        println!("  GitHub result score {} not ideal, considering Flathub fallback", gh.score);
+                        if installable {
+                            println!("  GitHub result score {} not ideal, considering Flathub fallback", gh.score);
+                        }
                         return Ok(fl);
                     },
-                    Err(_) => return Ok(gh), // no flathub, keep github
+                    Err(e) => {
+                        eprintln!("  Flathub search found nothing ({}), keeping GitHub result", e);
+                        return Ok(gh); // last resort: download + manual-install note
+                    },
                 }
             } else {
                 return Ok(gh);
@@ -153,6 +176,47 @@ impl Resolver {
             self.resolve_github_repo(&owner, &repo, opts)
         } else {
             self.search_and_resolve_github(spec, opts)
+        }
+    }
+
+    /// If a GitHub resolution won with a format Vista can't install
+    /// (tarball/zip/bare binary), try Flathub for the same project.
+    /// Returns Some(flathub result) or None to keep the GitHub result.
+    fn flathub_if_uninstallable(&self, res: &ResolutionResult, flathub_query: &str, opts: &ResolveOptions) -> Option<ResolutionResult> {
+        let asset = match &res.source {
+            ResolvedSource::Github { asset, .. } => asset,
+            _ => return None,
+        };
+        if asset.format.is_installable() {
+            return None;
+        }
+        if !opts.allow_flatpak || !self.config.flathub.enabled {
+            return None;
+        }
+        if matches!(&opts.preferred_source, Some(p) if p == "native") {
+            return None;
+        }
+        println!("  GitHub asset is {} (not directly installable) — checking Flathub for '{}'...",
+            asset.format, flathub_query);
+        match self.flathub.search(flathub_query) {
+            Ok(hits) => {
+                // Explicit repo request: only divert to Flathub on a real
+                // name match, never on fuzzy first-hit junk.
+                if let Some(hit) = hits.iter().find(|h| Self::flathub_matches_repo(flathub_query, h)) {
+                    println!("  Found matching Flathub build: {} ({})", hit.name, hit.app_id);
+                    Some(self.flathub_result(hit, "Flathub fallback (name match)"))
+                } else {
+                    if let Some(top) = hits.first() {
+                        eprintln!("  Flathub has no build matching '{}' (top hit: {}), keeping GitHub asset",
+                            flathub_query, top.app_id);
+                    }
+                    None
+                }
+            },
+            Err(e) => {
+                eprintln!("  Flathub search found nothing ({}), keeping GitHub result", e);
+                None
+            }
         }
     }
 
@@ -286,12 +350,7 @@ impl Resolver {
                     println!("  Found Flathub: {} ({})", hits[0].name, hits[0].app_id);
                 }
                 let chosen = &hits[0];
-                Ok(ResolutionResult {
-                    source: ResolvedSource::Flathub { app_id: chosen.app_id.clone(), name: chosen.name.clone(), summary: chosen.summary.clone() },
-                    score: 5,
-                    distro: self.distro.clone(),
-                    reason: "Flathub fallback".to_string(),
-                })
+                Ok(self.flathub_result(chosen, "Flathub fallback"))
             },
             Err(e) => {
                 // Try local flatpak search fallback
@@ -311,6 +370,44 @@ impl Resolver {
         }
     }
 
+    /// Does a Flathub hit plausibly match an explicit `owner/repo` request?
+    /// Normalized comparison (case/punctuation-insensitive, common suffixes
+    /// like -app/-desktop stripped) against the app name and app-id
+    /// components. Strict on purpose: installing Battle for Wesnoth when the
+    /// user asked for sharkdp/bat is worse than a manual-install note.
+    pub fn flathub_matches_repo(repo: &str, hit: &crate::flathub::FlathubHit) -> bool {
+        fn norm(s: &str) -> String {
+            let mut n: String = s.to_lowercase().chars().filter(|c| c.is_alphanumeric()).collect();
+            for suffix in ["app", "desktop", "linux", "bin", "gtk", "qt"] {
+                if n.len() > suffix.len() + 2 && n.ends_with(suffix) {
+                    n.truncate(n.len() - suffix.len());
+                    break;
+                }
+            }
+            n
+        }
+        let r = norm(repo);
+        if r.len() < 2 {
+            return false;
+        }
+        if norm(&hit.name) == r {
+            return true;
+        }
+        hit.app_id.split('.').any(|c| norm(c) == r)
+    }
+
+    fn flathub_result(&self, hit: &crate::flathub::FlathubHit, reason: &str) -> ResolutionResult {
+        ResolutionResult {
+            source: ResolvedSource::Flathub {
+                app_id: hit.app_id.clone(),
+                name: hit.name.clone(),
+                summary: hit.summary.clone(),
+            },
+            score: 5,
+            distro: self.distro.clone(),
+            reason: reason.to_string(),
+        }
+    }
     fn score_assets(&self, assets: Vec<PackageAsset>, is_prerelease: bool) -> Vec<ScoredAsset> {
         let is_stable = !is_prerelease;
         assets.iter().map(|a| score_asset(a, &self.distro, is_stable)).collect()

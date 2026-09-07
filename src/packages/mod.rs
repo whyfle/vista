@@ -72,6 +72,17 @@ impl PackageFormat {
         }
     }
 
+    /// Can Vista install this format without manual steps?
+    /// Native packages go through dnf/apt/pacman, AppImage is made executable
+    /// into ~/Applications, Flatpak via `flatpak install`. Tarballs/zips/
+    /// bare binaries need manual extraction -> NOT installable.
+    pub fn is_installable(&self) -> bool {
+        matches!(self,
+            PackageFormat::Rpm | PackageFormat::Deb | PackageFormat::Pacman |
+            PackageFormat::Apk | PackageFormat::Snap | PackageFormat::AppImage |
+            PackageFormat::Flatpak | PackageFormat::FlatpakRef)
+    }
+
     pub fn priority_score(&self) -> i32 {
         match self {
             PackageFormat::Rpm => 100,
@@ -162,9 +173,9 @@ pub fn detect_arch_from_filename(filename: &str) -> Option<String> {
 }
 
 pub fn extract_version_from_filename(filename: &str) -> Option<String> {
-    // Use regex to find version like v1.2.3 or 1.2.3
-    // Look for pattern: -1.2.3 , _1.2.3, v1.2.3
-    let re = Regex::new(r"[vV]?(\d+\.\d+(?:\.\d+)?(?:[-_\.][a-zA-Z0-9]+)*)").ok()?;
+    // Core version only (first X.Y[.Z]): "bat-v0.26.1-x86_64-unknown-linux-musl.tar.gz" -> "0.26.1".
+    // The old regex swallowed arch/os suffixes into the version ("0.26.1-x86_64-...").
+    let re = Regex::new(r"(\d+\.\d+(?:\.\d+)?)").ok()?;
     let caps = re.captures(filename)?;
     caps.get(1).map(|m| m.as_str().to_string())
 }
@@ -358,5 +369,26 @@ mod tests {
         assert!(is_checksum_file("checksums.txt"));
         assert!(is_checksum_file("app-1.0.sha256"));
         assert!(!is_checksum_file("app-1.0.rpm"));
+    }
+    #[test]
+    fn test_is_installable() {
+        assert!(PackageFormat::Rpm.is_installable());
+        assert!(PackageFormat::Deb.is_installable());
+        assert!(PackageFormat::Pacman.is_installable());
+        assert!(PackageFormat::AppImage.is_installable());
+        assert!(PackageFormat::Flatpak.is_installable());
+        assert!(!PackageFormat::TarGz.is_installable());
+        assert!(!PackageFormat::TarXz.is_installable());
+        assert!(!PackageFormat::Zip.is_installable());
+        assert!(!PackageFormat::Binary.is_installable());
+        assert!(!PackageFormat::Unknown.is_installable());
+    }
+    #[test]
+    fn test_version_is_core_only() {
+        // Arch/os suffixes must not leak into the version (seen live: bat 0.26.1 case)
+        assert_eq!(extract_version_from_filename("bat-v0.26.1-x86_64-unknown-linux-musl.tar.gz"), Some("0.26.1".to_string()));
+        assert_eq!(extract_version_from_filename("zapret-discord-youtube-1.10.2.tar.gz"), Some("1.10.2".to_string()));
+        assert_eq!(extract_version_from_filename("vista-0.1.0-1.fc44.x86_64.rpm"), Some("0.1.0".to_string()));
+        assert_eq!(extract_version_from_filename("fastfetch-linux-amd64.rpm"), None);
     }
 }
