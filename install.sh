@@ -91,9 +91,49 @@ WORK="${DOWNLOAD_ONLY:-$(mktemp -d)}"
 mkdir -p "$WORK"
 trap 'if [ -z "$DOWNLOAD_ONLY" ]; then rm -rf "$WORK"; fi' EXIT
 
+# NOTE: plain `--retry` does NOT retry HTTP errors with -f. --retry-all-errors
+# does (this bit us: a flapping GitHub edge returned instant 504s).
+CURL_OPTS="--retry-all-errors --retry 5 --retry-delay 3 --connect-timeout 20 --max-time 600"
+
+download() { # $1=url $2=dest — 0 on success
+  curl -fsSL $CURL_OPTS -o "$2" "$1"
+}
+
+# Fresh CDN URL for $1 via the GitHub API (no auth). Used when the static
+# /releases/download/ link hits a bad edge.
+api_asset_url() {
+  curl -fsSL $CURL_OPTS "https://api.github.com/repos/$REPO/releases/tags/$TAG" \
+    | grep -o '"browser_download_url": *"[^"]*/'"$1"'"' | head -n1 | cut -d'"' -f4
+}
+
+manual_hint() {
+  echo "Install manually instead:" >&2
+  echo "  1. Grab $ASSET + checksums.txt from https://github.com/$REPO/releases/tag/$TAG" >&2
+  echo "  2. sha256sum -c checksums.txt (after filtering to your file)" >&2
+  case "$FAMILY" in
+    rpm)  echo "  3. sudo dnf install -y ./$ASSET" >&2 ;;
+    deb)  echo "  3. sudo apt install ./$ASSET" >&2 ;;
+    arch) echo "  3. sudo pacman -U ./$ASSET" >&2 ;;
+  esac
+}
+
+fetch_one() { # $1=filename — direct, then API-resolved fallback
+  if download "$BASE/$1" "$WORK/$1"; then
+    return 0
+  fi
+  echo "Direct download failed for $1, resolving a fresh URL via the GitHub API ..." >&2
+  ALT="$(api_asset_url "$1")" || ALT=""
+  if [ -n "$ALT" ] && download "$ALT" "$WORK/$1"; then
+    return 0
+  fi
+  echo "Error: could not download $1 (GitHub CDN trouble?)." >&2
+  manual_hint
+  return 1
+}
+
 echo "Downloading $ASSET ..."
-curl -fsSL --retry 3 -o "$WORK/$ASSET" "$BASE/$ASSET"
-curl -fsSL --retry 3 -o "$WORK/checksums.txt" "$BASE/checksums.txt"
+fetch_one "$ASSET" || exit 1
+fetch_one "checksums.txt" || exit 1
 
 echo "Verifying checksum ..."
 (cd "$WORK" && sha256sum -c --status <(grep -F "  $ASSET" checksums.txt)) \
